@@ -5,9 +5,10 @@ import requests
 from requests.structures import CaseInsensitiveDict
 import logging
 from . import helpers
+from . import errors
 
 logging.basicConfig()
-logger = logging.getLogger("portainer-bot")
+logger = logging.getLogger("portainer")
 logger.setLevel(logging.DEBUG)
 
 class Portainer:
@@ -16,17 +17,16 @@ class Portainer:
     self.username = username
     self.password = password
 
-  def __get(self, url:str):
+  def get(self, url:str):
     resp = requests.get(self.host + url, headers = self.token)
     return resp.json()
 
-  def __post(self, url:str, data):
+  def post(self, url:str, data):
     resp = requests.post(self.host + url, headers = self.token, data=json.dumps(data))
     return resp.json()
 
-
   def login(self):
-    logger.info("Trying to login...")
+    logger.info('Trying to login to ' + self.host + '...')
     body = {'username': self.username, 'password' : self.password}
     resp = requests.post(self.host + '/auth', data=json.dumps(body))
     token = resp.json()["jwt"]
@@ -36,17 +36,15 @@ class Portainer:
     self.token = headers
     return
 
-
   def list_stacks(self):
      logger.info("Getting a list of stacks")
-     resp = self.__get('/stacks')
+     resp = self.get('/stacks')
      return resp
 
   def get_stack_id(self, name):
      stacks = self.list_stacks()
      ids = [s['Id'] for s in stacks if s['Name']==name]
      return ids[0]
-
 
   def get_stack(self, name):
      stacks = self.list_stacks()
@@ -55,40 +53,71 @@ class Portainer:
 
   def list_endpoints(self):
      logger.info("Getting a list of endpoints")
-     resp = self.__get('/endpoints')
+     resp = self.get('/endpoints')
      return resp
 
-  def get_docker_info(self, endpoint_id):
-    logger.info("Getting endpoint info")
-    resp = self.__get('/endpoints/'+ str(endpoint_id) + '/docker/info')
-    return resp
+  def list_tags(self):
+     logger.info("Getting a list of tags")
+     resp = self.get('/tags')
+     return resp
 
   def get_endpoint_id(self, name):
     endpoints = self.list_endpoints()
     ids = [e['Id'] for e in endpoints if e['Name']==name]
     return ids[0]
 
+  def get_endpoint_by_id(self, e_id):
+    return Endpoint(client=self, endpoint_id=e_id)
 
-  def create_config(self, endpoint_id, name, data):
+  def get_endpoint_by_tag(self, tag):
+    tags = self.list_tags()
+    target = [ei for t in tags for ei in t['Endpoints'] if t['Name']==tag]
+    if len(target)==1:
+      return self.get_endpoint_by_id(target[0])
+    elif len(target)==0:
+      raise errors.NoSuchTagError(tag)
+    else:
+      raise errors.AmbiguousTagError(tag, target)
+
+
+class Endpoint:
+  def __init__(self, client, endpoint_id):
+    self.client = client
+    self.endpoint_id = str(endpoint_id)
+
+  def get_docker_info(self):
+    logger.info("Getting endpoint info")
+    resp = self.client.get('/endpoints/'+ self.endpoint_id + '/docker/info')
+    return resp
+
+  def create_config(self, name, data):
     logger.info('Creating new config ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
-    resp = self.__post('/endpoints/' + str(endpoint_id) + '/docker/configs/create', body)
+    resp = self.client.post('/endpoints/' + self.endpoint_id + '/docker/configs/create', body)
     return resp
 
-  def create_secret(self, endpoint_id, name, data):
+  def create_secret(self, name, data):
     logger.info('Creating new secret ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
-    resp = self.__post('/endpoints/' + str(endpoint_id) + '/docker/secrets/create', body)
+    resp = self.client.post('/endpoints/' + self.endpoint_id + '/docker/secrets/create', body)
     return resp
 
+  def deploy(self, stack_name:str, compose:str, env_vars):
+    stacks = self.client.get_stack(stack_name)
+    info = self.get_docker_info()
+    swarm_id = info['Swarm']['Cluster']['ID']
 
-  def deploy(self, envname, name, manifest, envfile):
-    stack_name = str(envname) + '-' + str(name)
-    stacks = self.get_stack(stack_name)
     if len(stacks) == 1:
       logger.info('Updating existing stack name: ' + stack_name)
       existing_stack = stacks[0]
     else:
       logger.info('No existing stack with name: ' + stack_name)
+      data = {
+        'Env': env_vars,
+        'Name': stack_name,
+        'SwarmID': swarm_id,
+        'StackFileContent': compose
+      }
+      self.client.post('/stacks?endpointId='+ self.endpoint_id + '&method=string&type=1', data = data)
 
     return

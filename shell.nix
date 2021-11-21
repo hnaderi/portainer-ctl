@@ -9,5 +9,6 @@ in
         ps: with ps; [ requests ]
       )
     )
+      python-language-server
    ];
   }
