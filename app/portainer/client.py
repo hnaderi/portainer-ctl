@@ -22,7 +22,7 @@ class Portainer:
     if resp.ok:
       return resp.json()
     else:
-      raise errors.RequestError(resp.status_code, resp.json())
+      raise errors.RequestError(resp.status_code, resp.text)
 
   def get(self, url:str):
     resp = requests.get(self.host + url, headers = self.token)
@@ -108,14 +108,18 @@ class Endpoint:
   def create_config(self, name, data):
     logger.info('Creating new config ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
-    resp = self.client.post('/endpoints/' + self.endpoint_id + '/docker/configs/create', body)
-    return resp
+    try:
+      self.client.post('/endpoints/' + self.endpoint_id + '/docker/configs/create', body)
+    except Exception:
+      logger.info('existing config ' + name)
 
   def create_secret(self, name, data):
     logger.info('Creating new secret ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
-    resp = self.client.post('/endpoints/' + self.endpoint_id + '/docker/secrets/create', body)
-    return resp
+    try:
+      self.client.post('/endpoints/' + self.endpoint_id + '/docker/secrets/create', body)
+    except Exception:
+      logger.info('existing secret ' + name)
 
   def deploy(self, stack_name:str, compose:str, env_vars):
     stacks = self.client.get_stack(stack_name)
