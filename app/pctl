@@ -75,12 +75,12 @@ deploy_cmd.add_argument('-f', '--compose-file', help='compose manifest file', de
 deploy_cmd.add_argument('-n', '--name', help='deployment name', required=True)
 deploy_cmd.add_argument('-E', '--environment', help='environment to deploy on', choices=['staging', 'production'], required=True)
 deploy_cmd.add_argument('--env-file', help='dot env file used for deployment, it will be used as stack environment in portainer')
-deploy_cmd.add_argument('-e', '--variable', nargs='*', help='environment variable `SOME_ENV=some-value`', default=[])
+deploy_cmd.add_argument('-e', '--variable', action='append', help='environment variable `SOME_ENV=some-value`', default=[])
 deploy_cmd.add_argument('-c', '--config', help='''create config; args must be like `local-path-to-file:conf-name`;
 NOTE that as configs are immutable and might be already in use, your config name must not exist!
 use versioning or date in names to always get a new name
-''', nargs='*', default=[])
-deploy_cmd.add_argument('-s', '--secret', help='create a new secret; see --config.', default=[])
+''', action='append', default=[])
+deploy_cmd.add_argument('-s', '--secret', help='create a new secret; see --config.', action='append', default=[])
 deploy_cmd.set_defaults(func=deploy)
 
 destroy_cmd = subparsers.add_parser('destroy')
