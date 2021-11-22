@@ -22,7 +22,7 @@ class Portainer:
     if resp.ok:
       return resp.json()
     else:
-      raise errors.RequestError(resp.status_code, resp.text)
+      raise errors.RequestError(resp.url, resp.status_code, resp.text)
 
   def get(self, url:str):
     resp = requests.get(self.host + url, headers = self.token)

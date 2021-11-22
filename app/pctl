@@ -22,7 +22,7 @@ def deploy_app(args):
     try:
         deploy(args)
     except RequestError as err:
-        print(err.status, err.body , file=sys.stderr)
+        print(err.url, err.status, err.body , file=sys.stderr)
         sys.exit('Failed to deploy!')
 
 def deploy(args):

@@ -11,6 +11,7 @@ class AmbiguousTagError(Exception):
         self.endpoints = endpoints
 
 class RequestError(Exception):
-    def __init__(self, status, body):
+    def __init__(self, url, status, body):
+        self.url = url
         self.status = status
         self.body = body
