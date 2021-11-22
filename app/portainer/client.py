@@ -25,6 +25,14 @@ class Portainer:
     resp = requests.post(self.host + url, headers = self.token, data=json.dumps(data))
     return resp.json()
 
+  def put(self, url:str, data):
+    resp = requests.put(self.host + url, headers = self.token, data=json.dumps(data))
+    return resp.json()
+
+  def delete(self, url:str):
+    resp = requests.post(self.host + url, headers = self.token)
+    return resp.json()
+
   def login(self):
     logger.info('Trying to login to ' + self.host + '...')
     body = {'username': self.username, 'password' : self.password}
@@ -104,14 +112,26 @@ class Endpoint:
 
   def deploy(self, stack_name:str, compose:str, env_vars):
     stacks = self.client.get_stack(stack_name)
-    info = self.get_docker_info()
-    swarm_id = info['Swarm']['Cluster']['ID']
 
     if len(stacks) == 1:
       logger.info('Updating existing stack name: ' + stack_name)
       existing_stack = stacks[0]
+      stack_id = existing_stack['Id']
+
+      data = {
+        'Prune': True,
+        'StackFileContent': compose,
+        'Env': env_vars,
+        'id': stack_id
+      }
+
+      self.client.put('/stacks/' + str(stack_id) +'?endpointId='+ self.endpoint_id, data)
+
     else:
       logger.info('No existing stack with name: ' + stack_name)
+      info = self.get_docker_info()
+      swarm_id = info['Swarm']['Cluster']['ID']
+
       data = {
         'Env': env_vars,
         'Name': stack_name,
