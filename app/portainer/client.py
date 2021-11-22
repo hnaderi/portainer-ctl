@@ -16,28 +16,35 @@ class Portainer:
     self.host = host
     self.username = username
     self.password = password
+    self.token = {}
+
+  def __extract(self, resp):
+    if resp.ok:
+      return resp.json()
+    else:
+      raise errors.RequestError(resp.status_code, resp.json())
 
   def get(self, url:str):
     resp = requests.get(self.host + url, headers = self.token)
-    return resp.json()
+    return self.__extract(resp)
 
   def post(self, url:str, data):
     resp = requests.post(self.host + url, headers = self.token, data=json.dumps(data))
-    return resp.json()
+    return self.__extract(resp)
 
   def put(self, url:str, data):
     resp = requests.put(self.host + url, headers = self.token, data=json.dumps(data))
-    return resp.json()
+    return self.__extract(resp)
 
   def delete(self, url:str):
     resp = requests.post(self.host + url, headers = self.token)
-    return resp.json()
+    return self.__extract(resp)
 
   def login(self):
     logger.info('Trying to login to ' + self.host + '...')
     body = {'username': self.username, 'password' : self.password}
-    resp = requests.post(self.host + '/auth', data=json.dumps(body))
-    token = resp.json()["jwt"]
+    resp = self.post('/auth', body)
+    token = resp["jwt"]
     headers = CaseInsensitiveDict()
     headers["Accept"] = "application/json"
     headers["Authorization"] = "Bearer " + token

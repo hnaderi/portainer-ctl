@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 
 from portainer.client import Portainer
+from portainer.errors import RequestError
 from os import getenv
+import sys
 import argparse
 
 def parse_mount(conf:str):
@@ -15,6 +17,12 @@ def read_string(path):
     with open(path, 'r') as f:
         return ''.join(f.readlines())
 
+
+def deploy_app(args):
+    try:
+        deploy(args)
+    except RequestError as err:
+        print('Failed to deploy!', err.status, err.body , file=sys.stderr)
 
 def deploy(args):
     HOST=getenv('PORTAINER_HOST', args.host)
@@ -81,7 +89,7 @@ NOTE that as configs are immutable and might be already in use, your config name
 use versioning or date in names to always get a new name
 ''', action='append', default=[])
 deploy_cmd.add_argument('-s', '--secret', help='create a new secret; see --config.', action='append', default=[])
-deploy_cmd.set_defaults(func=deploy)
+deploy_cmd.set_defaults(func=deploy_app)
 
 destroy_cmd = subparsers.add_parser('destroy')
 destroy_cmd.add_argument('-n', '--name', help='deployment name', required=True)
