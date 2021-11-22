@@ -22,7 +22,8 @@ def deploy_app(args):
     try:
         deploy(args)
     except RequestError as err:
-        print('Failed to deploy!', err.status, err.body , file=sys.stderr)
+        print(err.status, err.body , file=sys.stderr)
+        sys.exit('Failed to deploy!')
 
 def deploy(args):
     HOST=getenv('PORTAINER_HOST', args.host)
