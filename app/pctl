@@ -46,10 +46,11 @@ def deploy(args):
 
     env_vars = []
     for line in env_lines:
-        idx = line.find('=')
+        striped = line.strip()
+        idx = striped.find('=')
         env_vars.append({
-            'name': line[:idx],
-            'value': line[idx+1:]
+            'name': striped[:idx],
+            'value': striped[idx+1:]
         })
 
     for conf in args.config:
