@@ -29,9 +29,14 @@ def deploy(args):
     HOST=getenv('PORTAINER_HOST', args.host)
     PASSWORD=getenv('PORTAINER_PASSWORD', args.password)
     USERNAME=getenv('PORTAINER_USERNAME', args.username)
+    API_TOKEN=getenv('PORTAINER_TOKEN', args.api_token)
 
-    bot = Portainer(HOST, USERNAME, PASSWORD)
-    bot.login()
+    bot = Portainer(HOST)
+    if API_TOKEN:
+      bot.authorize(API_TOKEN)
+    else:
+      bot.login(USERNAME, PASSWORD)
+
     endpoint = bot.get_endpoint_by_tag(args.environment)
 
     compose = ''
@@ -75,6 +80,7 @@ parser = argparse.ArgumentParser(description='Portainer deployment client',
 ### HACK: this is due to a known issue in argparse in python3
 parser.set_defaults(func=lambda args: parser.print_help())
 
+parser.add_argument('-T', '--api-token', help='api token for user, overrides PORTAINER_TOKEN variable')
 parser.add_argument('-H', '--host', help='portainer host, overrides PORTAINER_HOST variable; defaults to `http://localhost`', default='http://localhost')
 parser.add_argument('-U', '--username', help='username to login, overrides PORTAINER_USERNAME variable; defaults to `admin`', default='admin')
 parser.add_argument('-P', '--password', help='password for user, overrides PORTAINER_PASSWORD variable; defaults to admin', default='admin')

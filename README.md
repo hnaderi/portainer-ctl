@@ -4,16 +4,19 @@
 - Fully automated deployment
 - Support for multiple config and secret
 - Support for .env files and multiple variables
+- Support for api tokens introduced in portainer 2.11.0
 
 #### Usage
 
 ``` plaintext
-usage: pctl [-h] [-H HOST] [-U USERNAME] [-P PASSWORD] {deploy,destroy} ...
+usage: pctl [-h] [-T API_TOKEN] [-H HOST] [-U USERNAME] [-P PASSWORD] {deploy,destroy} ...
 
 Portainer deployment client
 
 optional arguments:
   -h, --help            show this help message and exit
+  -T API_TOKEN, --api-token API_TOKEN
+                        api token for user, overrides PORTAINER_TOKEN variable
   -H HOST, --host HOST  portainer host, overrides PORTAINER_HOST variable; defaults to `http://localhost`
   -U USERNAME, --username USERNAME
                         username to login, overrides PORTAINER_USERNAME variable; defaults to `admin`
@@ -26,13 +29,13 @@ subcommands:
   {deploy,destroy}      additional help
 
 Use it to automate workflows for less mouse clicks!
-
 ```
 
 You can provide host, username and password in environment:
 - PORTAINER_HOST
 - PORTAINER_USERNAME
 - PORTAINER_PASSWORD
+- PORTAINER_TOKEN
 
 ##### deploy command
 

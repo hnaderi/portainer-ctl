@@ -12,10 +12,8 @@ logger = logging.getLogger("portainer")
 logger.setLevel(logging.DEBUG)
 
 class Portainer:
-  def __init__(self, host: str, username : str, password : str):
+  def __init__(self, host: str):
     self.host = host
-    self.username = username
-    self.password = password
     self.token = {}
 
   def __extract(self, resp):
@@ -40,9 +38,17 @@ class Portainer:
     resp = requests.post(self.host + url, headers = self.token)
     return self.__extract(resp)
 
-  def login(self):
+  def authorize(self, api_token : str):
+    logger.info('Authorized for ' + self.host + ' using api token')
+    headers = CaseInsensitiveDict()
+    headers["Accept"] = "application/json"
+    headers["x-api-key"] = api_token
+    self.token = headers
+    return
+
+  def login(self, username : str, password : str):
     logger.info('Trying to login to ' + self.host + '...')
-    body = {'username': self.username, 'password' : self.password}
+    body = {'username': username, 'password' : password}
     resp = self.post('/auth', body)
     token = resp["jwt"]
     headers = CaseInsensitiveDict()
