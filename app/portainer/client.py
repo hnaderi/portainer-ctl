@@ -128,7 +128,8 @@ class Endpoint:
       logger.info('existing secret ' + name)
 
   def deploy(self, stack_name:str, compose:str, env_vars):
-    stack_name = stack_name.lower()
+    stack_name = stack_name.lower().strip()
+
     stacks = self.client.get_stack(stack_name)
 
     if len(stacks) == 1:
