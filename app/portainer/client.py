@@ -118,8 +118,8 @@ class Endpoint:
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
     try:
       self.client.post('/endpoints/' + self.endpoint_id + '/docker/configs/create', body)
-    except Exception:
-      logger.info('existing config ' + name)
+    except Exception as e:
+      logger.error(f"cannot create config: {str(e)}")
 
   def create_secret(self, name, data):
     name = name.strip()
@@ -128,8 +128,8 @@ class Endpoint:
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
     try:
       self.client.post('/endpoints/' + self.endpoint_id + '/docker/secrets/create', body)
-    except Exception:
-      logger.info('existing secret ' + name)
+    except Exception as e:
+      logger.error(f"cannot create secret: {str(e)}")
 
   def deploy(self, stack_name:str, compose:str, env_vars):
     stack_name = stack_name.lower().strip()
