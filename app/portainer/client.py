@@ -112,6 +112,8 @@ class Endpoint:
     return resp
 
   def create_config(self, name, data):
+    name = name.strip()
+
     logger.info('Creating new config ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
     try:
@@ -120,6 +122,8 @@ class Endpoint:
       logger.info('existing config ' + name)
 
   def create_secret(self, name, data):
+    name = name.strip()
+
     logger.info('Creating new secret ' + name)
     body = { 'Data': helpers.to_base64(data), 'Name': name, 'Labels': {} }
     try:
