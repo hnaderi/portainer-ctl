@@ -40,24 +40,29 @@ You can provide host, username and password in environment:
 ##### deploy command
 
 ``` plaintext
-usage: pctl deploy [-h] -f COMPOSE_FILE -n NAME -E {staging,production} [--env-file ENV_FILE] [-e VARIABLE] [-c CONFIG] [-s SECRET]
+usage: pctl deploy [-h] -f COMPOSE_FILE -n NAME -E {staging,production}
+                   [-S STACK_NAME] [--env-file ENV_FILE] [-e VARIABLE]
+                   [-c CONFIG] [-s SECRET]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -f COMPOSE_FILE, --compose-file COMPOSE_FILE
                         compose manifest file
   -n NAME, --name NAME  deployment name
   -E {staging,production}, --environment {staging,production}
                         environment to deploy on
-  --env-file ENV_FILE   dot env file used for deployment, it will be used as stack environment in portainer
+  -S STACK_NAME, --stack-name STACK_NAME
+                        use this to override stack name
+  --env-file ENV_FILE   dot env file used for deployment, it will be used as
+                        stack environment in portainer
   -e VARIABLE, --variable VARIABLE
                         environment variable `SOME_ENV=some-value`
   -c CONFIG, --config CONFIG
-                        create config; args must be like `local-path-to-file:conf-name`; NOTE that as configs are immutable and might be already in use, your config
-                        name must not exist! use versioning or date in names to always get a new name
+                        create config; args must be like `local-path-to-
+                        file:conf-name`; NOTE that as configs are immutable
+                        and might be already in use, your config name must not
+                        exist! use versioning or date in names to always get a
+                        new name
   -s SECRET, --secret SECRET
                         create a new secret; see --config.
-
 ```
-
-`

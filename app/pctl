@@ -68,7 +68,8 @@ def deploy(args):
         data = read_string(path)
         endpoint.create_secret(name=name, data = data)
 
-    stack_name = args.environment + '-' + args.name
+    stack_name = args.stack_name if args.stack_name != None else args.environment + '-' + args.name
+
     endpoint.deploy(stack_name = stack_name, compose = compose, env_vars = env_vars)
 
 
@@ -90,6 +91,7 @@ deploy_cmd = subparsers.add_parser('deploy')
 deploy_cmd.add_argument('-f', '--compose-file', help='compose manifest file', default='docker-compose.yaml', required=True)
 deploy_cmd.add_argument('-n', '--name', help='deployment name', required=True)
 deploy_cmd.add_argument('-E', '--environment', help='environment to deploy on', choices=['staging', 'production'], required=True)
+deploy_cmd.add_argument('-S', '--stack-name', help='use this to override stack name')
 deploy_cmd.add_argument('--env-file', help='dot env file used for deployment, it will be used as stack environment in portainer')
 deploy_cmd.add_argument('-e', '--variable', action='append', help='environment variable `SOME_ENV=some-value`', default=[])
 deploy_cmd.add_argument('-c', '--config', help='''create config; args must be like `local-path-to-file:conf-name`;
