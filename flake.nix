@@ -8,7 +8,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         python = (pkgs.python3.withPackages
-          (ps: with ps; [ black isort pylsp-mypy requests ]));
+          (ps: with ps; [ black isort pylsp-mypy requests types-requests ]));
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = [ python ];
