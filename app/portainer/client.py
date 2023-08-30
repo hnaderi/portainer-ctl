@@ -15,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 class Portainer:
     def __init__(self, host: str):
         self.host = host
-        self.token: CaseInsensitiveDict = {}
+        self.token: CaseInsensitiveDict = CaseInsensitiveDict()
 
     def __extract(self, resp):
         if resp.ok:
@@ -41,10 +41,8 @@ class Portainer:
 
     def authorize(self, api_token: str):
         logger.info("Authorized for " + self.host + " using api token")
-        headers = CaseInsensitiveDict()
-        headers["Accept"] = "application/json"
-        headers["x-api-key"] = api_token
-        self.token = headers
+        self.token["Accept"] = "application/json"
+        self.token["x-api-key"] = api_token
         return
 
     def login(self, username: str, password: str):
@@ -52,10 +50,8 @@ class Portainer:
         body = {"username": username, "password": password}
         resp = self.post("/auth", body)
         token = resp["jwt"]
-        headers = CaseInsensitiveDict()
-        headers["Accept"] = "application/json"
-        headers["Authorization"] = "Bearer " + token
-        self.token = headers
+        self.token["Accept"] = "application/json"
+        self.token["Authorization"] = "Bearer " + token
         return
 
     def list_stacks(self):
