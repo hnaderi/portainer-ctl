@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "portainer"
+version = "0.1.0"
+description = "A poor man's kubectl for docker swarm"
+authors = ["Hossein Naderi"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+python-semantic-release = "^8.0.8"
+black = "^23.7.0"
+isort = "^5.12.0"
+pylsp-mypy = "^0.6.7"
+
+[tool.semantic_release]
+version_variable = "pyproject.toml:version"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
