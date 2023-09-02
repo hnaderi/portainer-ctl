@@ -25,19 +25,22 @@ jobs:
         poetry run black . --check
         poetry run pctl
 
-  publish:
+  release:
     needs: [build]
-    runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
       with:
-        python-version: "3.10"
+        fetch-depth: 0
+
     - name: Install Poetry
       uses: snok/install-poetry@v1
+
     - name: Use Python Semantic Release to prepare release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -47,8 +50,14 @@ jobs:
           poetry install
           poetry run semantic-release publish
 
-    - name: Publish to PyPI
+    - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      # NOTE: DO NOT wrap the conditional in ${{ }} as it will always evaluate to true.
+      # See https://github.com/actions/runner/issues/1173
+      if: steps.release.outputs.released == 'true'
+
+    - name: Publish package distributions to GitHub Releases
+      uses: python-semantic-release/upload-to-gh-release@main
+      if: steps.release.outputs.released == 'true'
       with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
