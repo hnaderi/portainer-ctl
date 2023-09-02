@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
 import json
+import logging
+
 import requests
 from requests.structures import CaseInsensitiveDict
-import logging
-from . import helpers
-from . import errors
+
+from . import errors, helpers
 
 logging.basicConfig()
 logger = logging.getLogger("portainer")
