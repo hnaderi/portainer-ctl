@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+import argparse
+import sys
+from os import getenv
+
 from .client import Portainer
 from .errors import RequestError
-from os import getenv
-import sys
-import argparse
 
 
 def parse_mount(conf: str):
