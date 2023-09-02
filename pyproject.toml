@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "portainer"
+name = "portainer-ctl"
 version = "0.1.0"
 description = "A poor man's kubectl for docker swarm"
 authors = ["Hossein Naderi"]
@@ -18,7 +18,7 @@ isort = "^5.12.0"
 pylsp-mypy = "^0.6.7"
 
 [tool.poetry.scripts]
-pctl = 'portainer.cli:main'
+pctl = 'portainer_ctl.cli:main'
 
 [tool.semantic_release]
 version_variable = "pyproject.toml:version"
