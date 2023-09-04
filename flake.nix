@@ -11,16 +11,22 @@
   outputs = { self, nixpkgs, flake-utils, poetry2nix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        inherit (poetry2nix.legacyPackages.${system}) mkPoetryApplication;
+        inherit (poetry2nix.legacyPackages.${system})
+          mkPoetryApplication mkPoetryEnv;
         pkgs = nixpkgs.legacyPackages.${system};
+
+        python = pkgs.python3.withPackages (ps: with ps; [ pylsp-mypy ]);
+        poetry = poetry2nix.packages.${system}.poetry;
 
       in {
         packages = {
-          pctl = mkPoetryApplication { projectDir = self; };
+          pctl = mkPoetryApplication {
+            projectDir = self;
+            inherit python;
+          };
           default = self.packages.${system}.pctl;
         };
 
-        devShells.default =
-          pkgs.mkShell { packages = [ poetry2nix.packages.${system}.poetry ]; };
+        devShells.default = pkgs.mkShell { packages = [ poetry python ]; };
       });
 }
