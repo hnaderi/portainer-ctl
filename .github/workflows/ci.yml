@@ -1,7 +1,10 @@
 name: Upload Python Package
-
-on: [push, pull_request]
-
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: ['**']
+    tags: [v*]
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,22 +12,56 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-
-    - name: Install package
-      run: poetry install
-
-    - name: Linting and Sanity check
-      run: |
-        poetry run black . --check
-        poetry run pctl
-
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install package
+        run: poetry install
+      - name: Linting and Sanity check
+        run: |
+          poetry run black . --check
+          poetry run pctl
+  publish:
+    needs: [build]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Calculate version
+        id: get_version
+        run: |
+          VERSION=$(git describe --tags | sed "s/^v//")
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo $VERSION
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: |
+            hnaderi/pctl:${{ steps.get_version.outputs.VERSION }}
+            ghcr.io/hnaderi/pctl:${{ steps.get_version.outputs.VERSION }}
+            hnaderi/pctl:latest
+            ghcr.io/hnaderi/pctl:latest
   release:
     needs: [build]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -32,32 +69,22 @@ jobs:
     concurrency: release
     permissions:
       id-token: write
-
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-
-    - name: Use Python Semantic Release to prepare release
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install package
+        run: |
           poetry install
-          poetry run semantic-release publish
-
-    - name: Publish package distributions to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      # NOTE: DO NOT wrap the conditional in ${{ }} as it will always evaluate to true.
-      # See https://github.com/actions/runner/issues/1173
-      if: steps.release.outputs.released == 'true'
-
-    - name: Publish package distributions to GitHub Releases
-      uses: python-semantic-release/upload-to-gh-release@main
-      if: steps.release.outputs.released == 'true'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+          poetry build
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # NOTE: DO NOT wrap the conditional in ${{ }} as it will always evaluate to true.
+        # # See https://github.com/actions/runner/issues/1173
+      - name: Publish package distributions to GitHub Releases
+        uses: python-semantic-release/upload-to-gh-release@main
+        # if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
