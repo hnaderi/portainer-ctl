@@ -2,8 +2,17 @@
 [![](https://img.shields.io/pypi/v/portainer-ctl)](https://pypi.org/project/portainer-ctl/)
 
 ### Install
+This project is published to PyPi and you can install it using pip:
 ```
 pip install portainer-ctl
+```
+
+You can also use the published container images:
+
+```sh
+docker pull hnaderi/pctl
+# or
+docker pull ghcr.io/hnaderi/pctl
 ```
 
 #### Features
