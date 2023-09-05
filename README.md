@@ -1,4 +1,10 @@
-### Portainer bot
+### Portainer controller
+[![](https://img.shields.io/pypi/v/portainer-ctl)](https://pypi.org/project/portainer-ctl/)
+
+### Install
+```
+pip install portainer-ctl
+```
 
 #### Features
 - Fully automated deployment
