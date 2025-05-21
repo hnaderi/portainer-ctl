@@ -1,45 +1,50 @@
 name: Upload Python Package
 on:
   pull_request:
-    branches: ['**']
+    branches: ["**"]
   push:
-    branches: ['**']
+    branches: ["**"]
     tags: [v*]
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version:
+          - "3.8"
+          - "3.10"
+          - "3.12"
+          - "3.14"
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-      - name: Install package
-        run: poetry install
-      - name: Linting and Sanity check
-        run: |
-          poetry run black . --check
-          poetry run pctl
+
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      - name: Sanity check
+        run: uv run pctl
+
   publish:
     needs: [build]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -50,18 +55,26 @@ jobs:
           VERSION=$(git describe --tags | sed "s/^v//")
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo $VERSION
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            hnaderi/pctl
+            ghcr.io/hnaderi/pctl
+          tags: |
+            ${{ steps.get_version.outputs.VERSION }}
+            latest
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
-          tags: |
-            hnaderi/pctl:${{ steps.get_version.outputs.VERSION }}
-            ghcr.io/hnaderi/pctl:${{ steps.get_version.outputs.VERSION }}
-            hnaderi/pctl:latest
-            ghcr.io/hnaderi/pctl:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
   release:
     needs: [build]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
@@ -71,16 +84,18 @@ jobs:
       id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
       - name: Install package
         run: |
-          poetry version $(git describe --tags --abbrev=0)
-          poetry install
-          poetry build
+          uv version $(git describe --tags --abbrev=0)
+          uv build
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
       - name: Release
