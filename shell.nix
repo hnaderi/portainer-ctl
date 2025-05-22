@@ -1,6 +1,6 @@
 let
   pkgs = import <nixpkgs> { };
-  python = pkgs.python3.withPackages (ps: with ps; [ pylsp-mypy ]);
+  python = pkgs.python3.withPackages (ps: with ps; [ pylsp-mypy requests black ]);
 in pkgs.mkShell {
   name = "Portainer controller";
   buildInputs = [ python pkgs.uv ];

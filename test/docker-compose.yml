@@ -1,0 +1,27 @@
+services:
+  script:
+    image: alpine
+    environment:
+      VAR_STATIC: static
+      VAR_DYNAMIC: ${VAR_DYNAMIC}
+    command: |
+      sh -c "
+      env;
+      echo Config:
+      cat /test
+      echo Secret:
+      cat /run/secrets/test
+      "
+    configs:
+      - test
+    secrets:
+      - test
+
+configs:
+  test:
+    name: test
+    external: true
+secrets:
+  test:
+    name: test
+    external: true

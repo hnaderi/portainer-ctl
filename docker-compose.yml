@@ -1,0 +1,28 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:2.30.1
+    command:
+      - --tlsskipverify
+      - --admin-password-file=/pass
+    ports:
+      - "9000:9000"
+      - "8000:8000"
+    volumes:
+      - portainer_data:/data
+      - ./portainer-admin:/pass
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - agent_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  agent_network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  portainer_data:
