@@ -236,10 +236,15 @@ class TagsAPI:
     def __init__(self, client):
         self.__client = client
 
+    def create(self, name: str):
+        return self.__client.post("/tags", {"name": name})
+
     def list(self):
         logger.info("Getting a list of tags")
-        resp = self.__client.get("/tags")
-        return resp
+        return self.__client.get("/tags")
+
+    def delete(self, id):
+        return self.__client.delete(f"/tags/{id}")
 
     def get_endpoints(self, tag):
         tags = self.list()

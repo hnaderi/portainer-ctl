@@ -333,12 +333,28 @@ def _build_tags_cmd(subparsers):
         title="supported resources", help="resource to get info"
     )
 
+    def create(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.tags.create(args.name)))
+
     def ls(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoints.list()))
+        print(json.dumps(client.tags.list()))
+
+    def delete(args):
+        client = get_authenticated_api(args)
+        client.tags.delete(args.id)
+
+    create_cmd = subcmd.add_parser("create")
+    create_cmd.add_argument("name")
+    create_cmd.set_defaults(func=create)
 
     ls_cmd = subcmd.add_parser("ls")
     ls_cmd.set_defaults(func=ls)
+
+    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd.add_argument("id")
+    delete_cmd.set_defaults(func=delete)
 
 
 def _build_secrets_cmd(subparsers):
