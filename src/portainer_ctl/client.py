@@ -54,3 +54,6 @@ class Client:
         self.token["Accept"] = "application/json"
         self.token["Authorization"] = "Bearer " + token
         return
+
+    def logout(self):
+        self.token.clear()
