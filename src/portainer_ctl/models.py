@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List, Optional
 
 
 class EndpointCreationType(Enum):
@@ -19,6 +20,6 @@ class EndpointCreationType(Enum):
 class EndpointCreationRequest:
     name: str
     type: EndpointCreationType
-    url: str | None
-    tagIds: list[int]
+    url: Optional[str]
+    tagIds: List[int]
     groupId: int
