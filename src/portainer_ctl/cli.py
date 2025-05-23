@@ -230,16 +230,71 @@ def _build_stacks_cmd(subparsers):
         elif args.id:
             print(json.dumps(client.stacks.get(args.id)))
 
+    def get_file(args):
+        client = get_authenticated_api(args)
+        print(client.stacks.get_file(args.id))
+
     def ls(args):
         client = get_authenticated_api(args)
         print(json.dumps(client.stacks.list()))
+
+    def delete(args):
+        client = get_authenticated_api(args)
+        if args.id:
+            print(
+                json.dumps(
+                    client.endpoint(args.endpoint).stacks.delete(args.id, args.external)
+                )
+            )
+        elif args.name:
+            print(
+                json.dumps(
+                    client.endpoint(args.endpoint).stacks.delete_by_name(
+                        args.name, args.external
+                    )
+                )
+            )
+
+    def start(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoint(args.endpoint).stacks.start(args.id)))
+
+    def stop(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoint(args.endpoint).stacks.stop(args.id)))
+
+    _build_deploy_cmd(subcmd)
+
+    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd.set_defaults(func=ls)
 
     get_cmd = subcmd.add_parser("get")
     name_or_id_group(get_cmd)
     get_cmd.set_defaults(func=get)
 
-    ls_cmd = subcmd.add_parser("ls")
-    ls_cmd.set_defaults(func=ls)
+    get_file_cmd = subcmd.add_parser("get-file")
+    get_file_cmd.add_argument("id")
+    get_file_cmd.set_defaults(func=get_file)
+
+    start_cmd = subcmd.add_parser("start")
+    start_cmd.add_argument("id")
+    requires_endpoint(start_cmd)
+    start_cmd.set_defaults(func=start)
+
+    stop_cmd = subcmd.add_parser("stop")
+    stop_cmd.add_argument("id")
+    requires_endpoint(stop_cmd)
+    stop_cmd.set_defaults(func=stop)
+
+    delete_cmd = subcmd.add_parser("delete")
+    name_or_id_group(delete_cmd)
+    requires_endpoint(delete_cmd)
+    delete_cmd.add_argument(
+        "--external",
+        help="Whether or not delete if it is an external stack",
+        action="store_true",
+    )
+    delete_cmd.set_defaults(func=delete)
 
 
 def _build_tags_cmd(subparsers):

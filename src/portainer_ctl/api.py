@@ -32,6 +32,10 @@ class GlobalStacksAPI:
         logger.info(f"Getting stack {id}")
         return self.__client.get(f"/stacks/{id}")
 
+    def get_file(self, id):
+        resp = self.__client.get(f"/stacks/{id}/file")
+        return resp["StackFileContent"]
+
 
 class StacksAPI:
     def __init__(self, client, endpoint_id):
@@ -57,8 +61,8 @@ class StacksAPI:
 
             self.__client.put(
                 f"/stacks/{str(stack_id)}",
-                data,
                 params={"endpointId": self.__endpoint_id},
+                data=data,
             )
 
         else:
@@ -73,14 +77,41 @@ class StacksAPI:
                 "StackFileContent": compose,
             }
             self.__client.post(
-                f"/stacks/create/swarm/string?endpointId={self.__endpoint_id}",
+                f"/stacks/create/swarm/string",
+                params={"endpointId": self.__endpoint_id},
                 data=data,
             )
 
         return
 
-    def get(self, id):
-        pass
+    def start(self, id):
+        return self.__client.post(
+            f"/stacks/{id}/start", params={"endpointId": self.__endpoint_id}
+        )
+
+    def stop(self, id):
+        return self.__client.post(
+            f"/stacks/{id}/stop",
+            params={"endpointId": self.__endpoint_id},
+        )
+
+    def delete(self, id, external: bool = False):
+        return self.__client.delete(
+            f"/stacks/{id}",
+            params={
+                "endpointId": self.__endpoint_id,
+                "external": str(external).lower(),
+            },
+        )
+
+    def delete_by_name(self, name: str, external: bool = False):
+        return self.__client.delete(
+            f"/stacks/name/{name}",
+            params={
+                "endpointId": self.__endpoint_id,
+                "external": str(external).lower(),
+            },
+        )
 
 
 class ConfigsAPI:
