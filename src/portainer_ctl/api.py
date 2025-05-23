@@ -9,6 +9,7 @@ from .client import Client
 
 logger = logging.getLogger(__name__)
 
+
 class GlobalStacksAPI:
     def __init__(self, client: Client):
         self.__client = client
@@ -168,12 +169,25 @@ class TagsAPI:
         return target
 
 
+class PublicAPI:
+    def __init__(self, client: Client):
+        self.__client = client
+
+    def status(self):
+        return self.__client.get("/status")
+
+    def init(self, username: str, password: str):
+        data = {"password": password, "username": username}
+        return self.__client.post("/users/admin/init", data)
+
+
 class Portainer:
     def __init__(self, client: Client):
         self.__client = client
         self.stacks = GlobalStacksAPI(client)
         self.endpoints = EndpointsAPI(client)
         self.tags = TagsAPI(client)
+        self.public = PublicAPI(client)
 
     def endpoint(self, id) -> EndpointAPI:
         return EndpointAPI(self.__client, id)
