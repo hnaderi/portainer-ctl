@@ -17,3 +17,8 @@ class RequestError(Exception):
         self.url = url
         self.status = status
         self.body = body
+
+
+class InvalidCommand(Exception):
+    def __init__(self, msg):
+        self.msg = msg

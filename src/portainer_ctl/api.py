@@ -4,7 +4,7 @@ import logging
 import requests
 from requests.structures import CaseInsensitiveDict
 
-from . import errors, helpers
+from . import errors, helpers, models
 from .client import Client
 
 logger = logging.getLogger(__name__)
@@ -137,6 +137,16 @@ class EndpointsAPI:
     def __init__(self, client):
         self.__client = client
 
+    def create(self, request: models.EndpointCreationRequest):
+        data = {
+            "Name": request.name,
+            "EndpointCreationType": request.type,
+            "URL": request.url,
+            "GroupID": request.groupId,
+            "TagIds": request.tagIds,
+        }
+        return self.__client.post("/endpoints", data)
+
     def list(self, **kwargs):
         logger.info("Getting a list of endpoints")
         resp = self.__client.get("/endpoints", **kwargs)
@@ -154,9 +164,6 @@ class EndpointsAPI:
 class TagsAPI:
     def __init__(self, client):
         self.__client = client
-
-    def get(self, id):
-        pass
 
     def list(self):
         logger.info("Getting a list of tags")
