@@ -37,8 +37,11 @@ class Client:
         return self.__extract(resp)
 
     def delete(self, url: str, **kwargs):
-        resp = requests.post(self.host + url, headers=self.token, **kwargs)
-        return self.__extract(resp)
+        resp = requests.delete(self.host + url, headers=self.token, **kwargs)
+        if resp.ok:
+            return
+        else:
+            raise errors.RequestError(resp.url, resp.status_code, resp.text)
 
     def authorize(self, api_token: str):
         logger.info("Authorized for " + self.host + " using api token")

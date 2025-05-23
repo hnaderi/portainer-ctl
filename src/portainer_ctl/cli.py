@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
-import sys
-from os import getenv
 import json
 import logging
+import sys
+from os import getenv
 
-from .client import Client
+from . import errors
 from .api import Portainer
-from .errors import RequestError
+from .client import Client
 
 
 def configure_logging(args):
@@ -24,6 +24,48 @@ def parse_mount(conf: str):
         print("invalid mount argument: " + conf)
 
 
+def name_or_id_group(parser: argparse.ArgumentParser):
+    args = parser.add_mutually_exclusive_group(required=True)
+    args.add_argument("-n", "--name")
+    args.add_argument("--id")
+
+
+def docker_filter_group(parser: argparse.ArgumentParser):
+    args = parser.add_argument_group()
+    args.add_argument(
+        "-n",
+        "--name",
+        action="append",
+        default=[],
+    )
+    args.add_argument(
+        "-l",
+        "--label",
+        action="append",
+        default=[],
+    )
+    args.add_argument(
+        "--id",
+        action="append",
+        default=[],
+    )
+
+
+def file_or_inline(parser: argparse.ArgumentParser):
+    args = parser.add_mutually_exclusive_group(required=True)
+    args.add_argument("-f", "--file")
+    args.add_argument("--value")
+
+
+def requires_endpoint(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "-E",
+        "--endpoint",
+        help="endpoint to deploy on",
+        required=True,
+    )
+
+
 def read_string(path):
     with open(path, "r") as f:
         return "".join(f.readlines())
@@ -32,7 +74,7 @@ def read_string(path):
 def deploy_app(args):
     try:
         deploy(args)
-    except RequestError as err:
+    except errors.RequestError as err:
         print(err.url, err.status, err.body, file=sys.stderr)
         sys.exit("Failed to deploy!")
 
@@ -52,21 +94,20 @@ def get_authenticated_client(args):
     return client
 
 
-def connect(args):
+def get_unauthenticated_api(args):
+    client = Client(args.host)
+    return Portainer(client)
+
+
+def get_authenticated_api(args):
     client = get_authenticated_client(args)
     return Portainer(client)
 
 
 def deploy(args):
-    api = connect(args)
+    api = get_authenticated_api(args)
 
-    endpoints = api.tags.get_endpoints(args.environment)
-    if len(endpoints) == 0:
-        raise errors.NoSuchTagError(tag)
-    elif len(endpoints) > 1:
-        raise errors.AmbiguousTagError(tag, target)
-
-    ep = api.endpoint(endpoints[0])
+    endpoint = api.endpoint(args.endpoint)
 
     compose = ""
     with open(args.compose_file, "r") as f:
@@ -87,24 +128,16 @@ def deploy(args):
     for conf in args.config:
         path, name = parse_mount(conf)
         data = read_string(path)
-        ep.configs.create(name=name, data=data)
+        endpoint.configs.create(name=name, data=data)
 
     for conf in args.secret:
         path, name = parse_mount(conf)
         data = read_string(path)
-        ep.secrets.create(name=name, data=data)
+        endpoint.secrets.create(name=name, data=data)
 
-    stack_name = (
-        args.stack_name
-        if args.stack_name != None
-        else args.environment + "-" + args.name
+    endpoint.stacks.create(
+        stack_name=args.stack_name, compose=compose, env_vars=env_vars
     )
-
-    ep.stacks.create(stack_name=stack_name, compose=compose, env_vars=env_vars)
-
-
-def destroy(args):
-    print(args)
 
 
 def _build_deploy_cmd(subparsers):
@@ -117,14 +150,12 @@ def _build_deploy_cmd(subparsers):
         required=True,
     )
     deploy_cmd.add_argument("-n", "--name", help="deployment name", required=True)
+    requires_endpoint(deploy_cmd)
     deploy_cmd.add_argument(
-        "-E",
-        "--environment",
-        help="environment to deploy on",
+        "-S",
+        "--stack-name",
+        help="Name of the stack to create or update",
         required=True,
-    )
-    deploy_cmd.add_argument(
-        "-S", "--stack-name", help="use this to override stack name"
     )
     deploy_cmd.add_argument(
         "--env-file",
@@ -157,37 +188,201 @@ def _build_deploy_cmd(subparsers):
     deploy_cmd.set_defaults(func=deploy_app)
 
 
-def _build_get_cmd(subparsers):
-    get_cmd = subparsers.add_parser("get")
-    get_cmd.set_defaults(func=lambda args: get_cmd.print_help())
+def _build_endpoints_cmd(subparsers):
+    endpoints_cmd = subparsers.add_parser("endpoints")
+    endpoints_cmd.set_defaults(func=lambda args: endpoints_cmd.print_help())
 
-    subcmd = get_cmd.add_subparsers(
+    subcmd = endpoints_cmd.add_subparsers(
         title="supported resources", help="resource to get info"
     )
 
-    def build_get_endpoints_cmd():
+    def get(args):
+        client = get_authenticated_api(args)
+        if args.name:
+            print(json.dumps(client.endpoints.get_by_name(args.name)))
+        elif args.id:
+            print(json.dumps(client.endpoints.get(args.id)))
+
+    def ls(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoints.list()))
+
+    get_cmd = subcmd.add_parser("get")
+    name_or_id_group(get_cmd)
+    get_cmd.set_defaults(func=get)
+
+    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd.set_defaults(func=ls)
+
+
+def _build_stacks_cmd(subparsers):
+    stacks_cmd = subparsers.add_parser("stacks")
+    stacks_cmd.set_defaults(func=lambda args: stacks_cmd.print_help())
+
+    subcmd = stacks_cmd.add_subparsers(
+        title="supported resources", help="resource to get info"
+    )
+
+    def get(args):
+        client = get_authenticated_api(args)
+        if args.name:
+            print(json.dumps(client.stacks.get_stacks_by_name(args.name)))
+        elif args.id:
+            print(json.dumps(client.stacks.get(args.id)))
+
+    def ls(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.stacks.list()))
+
+    get_cmd = subcmd.add_parser("get")
+    name_or_id_group(get_cmd)
+    get_cmd.set_defaults(func=get)
+
+    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd.set_defaults(func=ls)
+
+
+def _build_tags_cmd(subparsers):
+    tags_cmd = subparsers.add_parser("tags")
+    tags_cmd.set_defaults(func=lambda args: tags_cmd.print_help())
+
+    subcmd = tags_cmd.add_subparsers(
+        title="supported resources", help="resource to get info"
+    )
+
+    def ls(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoints.list()))
+
+    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd.set_defaults(func=ls)
+
+
+def _build_secrets_cmd(subparsers):
+    secrets_cmd = subparsers.add_parser("secrets")
+    secrets_cmd.set_defaults(func=lambda args: secrets_cmd.print_help())
+
+    subcmd = secrets_cmd.add_subparsers(
+        title="supported resources", help="resource to get info"
+    )
+
+    requires_endpoint(secrets_cmd)
+
+    def create(args):
+        client = get_authenticated_api(args)
+        data = args.value if args.value else read_string(args.file)
+        print(
+            json.dumps(client.endpoint(args.endpoint).secrets.create(args.name, data))
+        )
+
+    def ls(args):
+        client = get_authenticated_api(args)
+        print(
+            json.dumps(
+                client.endpoint(args.endpoint).secrets.ls(
+                    id=args.id, name=args.name, label=args.label
+                )
+            )
+        )
+
+    def delete(args):
+        client = get_authenticated_api(args)
+        client.endpoint(args.endpoint).secrets.delete(args.id)
+
+    create_cmd = subcmd.add_parser("create")
+    create_cmd.add_argument("name")
+    file_or_inline(create_cmd)
+    create_cmd.set_defaults(func=create)
+
+    ls_cmd = subcmd.add_parser("ls")
+    docker_filter_group(ls_cmd)
+    ls_cmd.set_defaults(func=ls)
+
+    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd.add_argument("id")
+    delete_cmd.set_defaults(func=delete)
+
+
+def _build_configs_cmd(subparsers):
+    configs_cmd = subparsers.add_parser("configs")
+    configs_cmd.set_defaults(func=lambda args: configs_cmd.print_help())
+
+    subcmd = configs_cmd.add_subparsers(
+        title="supported resources", help="resource to get info"
+    )
+
+    requires_endpoint(configs_cmd)
+
+    def create(args):
+        client = get_authenticated_api(args)
+        data = args.value if args.value else read_string(args.file)
+        print(
+            json.dumps(client.endpoint(args.endpoint).configs.create(args.name, data))
+        )
+
+    def ls(args):
+        client = get_authenticated_api(args)
+        print(
+            json.dumps(
+                client.endpoint(args.endpoint).configs.ls(
+                    id=args.id, name=args.name, label=args.label
+                )
+            )
+        )
+
+    def delete(args):
+        client = get_authenticated_api(args)
+        client.endpoint(args.endpoint).configs.delete(args.id)
+
+    create_cmd = subcmd.add_parser("create")
+    create_cmd.add_argument("name")
+    file_or_inline(create_cmd)
+    create_cmd.set_defaults(func=create)
+
+    ls_cmd = subcmd.add_parser("ls")
+    docker_filter_group(ls_cmd)
+    ls_cmd.set_defaults(func=ls)
+
+    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd.add_argument("id")
+    delete_cmd.set_defaults(func=delete)
+
+
+def _build_system_cmd(subparsers):
+    cmd = subparsers.add_parser("system")
+    cmd.set_defaults(func=lambda args: cmd.print_help())
+
+    subcmd = cmd.add_subparsers(
+        title="supported resources", help="resource to get info"
+    )
+
+    def build_init_cmd():
+        def init(args):
+            PASSWORD = getenv("PORTAINER_PASSWORD", args.password)
+            USERNAME = getenv("PORTAINER_USERNAME", args.username)
+            if not (USERNAME and PASSWORD):
+                raise errors.InvalidCommand(
+                    "Both username and password are required for admin initiation."
+                )
+            portainer = get_unauthenticated_api(args)
+
+            print(
+                json.dumps(portainer.public.init(username=USERNAME, password=PASSWORD))
+            )
+
+        init_cmd = subcmd.add_parser("init")
+        init_cmd.set_defaults(func=init)
+
+    def build_status_cmd():
         def get(args):
-            client = connect(args)
-            if args.name:
-                print(json.dumps(client.endpoints.get_by_name(args.name)))
-            elif args.id:
-                print(json.dumps(client.endpoints.get(args.id)))
-            else:
-                print(json.dumps(client.endpoints.list()))
+            client = get_unauthenticated_api(args)
+            print(json.dumps(client.public.status()))
 
-        endpoints = subcmd.add_parser("endpoints")
-        args = endpoints.add_mutually_exclusive_group()
-        args.add_argument("-n", "--name")
-        args.add_argument("--id")
+        status = subcmd.add_parser("status")
+        status.set_defaults(func=get)
 
-        endpoints.set_defaults(func=get)
-
-    def build_get_stacks_cmd():
-        stacks = subcmd.add_parser("stacks")
-        stacks.set_defaults(func=destroy)
-
-    build_get_endpoints_cmd()
-    build_get_stacks_cmd()
+    build_init_cmd()
+    build_status_cmd()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -231,7 +426,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     _build_deploy_cmd(subparsers)
-    _build_get_cmd(subparsers)
+    _build_stacks_cmd(subparsers)
+    _build_configs_cmd(subparsers)
+    _build_secrets_cmd(subparsers)
+    _build_endpoints_cmd(subparsers)
+    _build_tags_cmd(subparsers)
+    _build_system_cmd(subparsers)
 
     return parser
 

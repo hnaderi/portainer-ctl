@@ -84,9 +84,14 @@ class StacksAPI:
 
 
 class ConfigsAPI:
-    def __init__(self, client, endpoint_id):
+    def __init__(self, client, endpoint_id, api_version: str):
         self.__client = client
         self.__endpoint_id = str(endpoint_id)
+        self.__base = (
+            f"/endpoints/{self.__endpoint_id}/docker/"
+            + (f"v{api_version}/" if api_version else "")
+            + "configs"
+        )
 
     def create(self, name, data):
         name = name.strip()
@@ -94,17 +99,37 @@ class ConfigsAPI:
         logger.info("Creating new config " + name)
         body = {"Data": helpers.to_base64(data), "Name": name, "Labels": {}}
         try:
-            self.__client.post(
-                "/endpoints/" + self.__endpoint_id + "/docker/configs/create", body
-            )
+            return self.__client.post(f"{self.__base}/create", body)
         except Exception as e:
             logger.error(f"cannot create config: {str(e)}")
 
+    def get(self, id: str):
+        return self.ls(id=[id])
+
+    def get_by_name(self, name: str):
+        return self.ls(name=[name])
+
+    def ls(self, **kwargs):
+        return self.__client.get(
+            self.__base,
+            params={"filters": json.dumps(kwargs)},
+        )
+
+    def delete(self, id: str):
+        return self.__client.delete(
+            f"{self.__base}/{id}",
+        )
+
 
 class SecretsAPI:
-    def __init__(self, client, endpoint_id):
+    def __init__(self, client, endpoint_id, api_version: str):
         self.__client = client
         self.__endpoint_id = str(endpoint_id)
+        self.__base = (
+            f"/endpoints/{self.__endpoint_id}/docker/"
+            + (f"v{api_version}/" if api_version else "")
+            + "secrets"
+        )
 
     def create(self, name, data):
         name = name.strip()
@@ -112,19 +137,34 @@ class SecretsAPI:
         logger.info("Creating new secret " + name)
         body = {"Data": helpers.to_base64(data), "Name": name, "Labels": {}}
         try:
-            self.__client.post(
-                "/endpoints/" + self.__endpoint_id + "/docker/secrets/create", body
-            )
+            return self.__client.post(f"{self.__base}/create", body)
         except Exception as e:
             logger.error(f"cannot create secret: {str(e)}")
+
+    def ls(self, **kwargs):
+        return self.__client.get(
+            self.__base,
+            params={"filters": json.dumps(kwargs)},
+        )
+
+    def delete(self, id: str):
+        return self.__client.delete(
+            f"{self.__base}/{id}",
+        )
 
 
 class EndpointAPI:
     def __init__(self, client, endpoint_id):
         self.__client = client
         self.__endpoint_id = str(endpoint_id)
-        self.configs = ConfigsAPI(client, endpoint_id)
-        self.secrets = SecretsAPI(client, endpoint_id)
+        logger.info("Getting endpoint info")
+        version = self.__client.get(
+            "/endpoints/" + self.__endpoint_id + "/docker/version"
+        )
+        api_version = version["ApiVersion"]
+        self.__api_version = api_version
+        self.configs = ConfigsAPI(client, endpoint_id, api_version)
+        self.secrets = SecretsAPI(client, endpoint_id, api_version)
         self.stacks = StacksAPI(client, endpoint_id)
 
     def get_docker_info(self):
