@@ -210,6 +210,14 @@ def _build_endpoints_cmd(subparsers):
         client = get_authenticated_api(args)
         print(json.dumps(client.endpoints.list()))
 
+    def info(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoint(args.endpoint).get_docker_info()))
+
+    def version(args):
+        client = get_authenticated_api(args)
+        print(json.dumps(client.endpoint(args.endpoint).get_docker_version()))
+
     def create(args):
         client = get_authenticated_api(args)
         request = models.EndpointCreationRequest()
@@ -244,6 +252,14 @@ def _build_endpoints_cmd(subparsers):
     )
     create_cmd.add_argument("-g", "--group")
     create_cmd.set_defaults(func=create)
+
+    info_cmd = subcommand(subcmd, "info")
+    requires_endpoint(info_cmd)
+    info_cmd.set_defaults(func=info)
+
+    version_cmd = subcommand(subcmd, "version")
+    requires_endpoint(version_cmd)
+    version_cmd.set_defaults(func=version)
 
 
 def _build_stacks_cmd(subparsers):

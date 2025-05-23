@@ -203,6 +203,11 @@ class EndpointAPI:
         resp = self.__client.get("/endpoints/" + self.__endpoint_id + "/docker/info")
         return resp
 
+    def get_docker_version(self):
+        logger.info("Getting endpoint docker version")
+        resp = self.__client.get("/endpoints/" + self.__endpoint_id + "/docker/version")
+        return resp
+
 
 class EndpointsAPI:
     def __init__(self, client):
