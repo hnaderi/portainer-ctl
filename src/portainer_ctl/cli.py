@@ -6,7 +6,7 @@ import logging
 import sys
 from os import getenv
 
-from . import errors
+from . import errors, models
 from .api import Portainer
 from .client import Client
 
@@ -207,12 +207,40 @@ def _build_endpoints_cmd(subparsers):
         client = get_authenticated_api(args)
         print(json.dumps(client.endpoints.list()))
 
+    def create(args):
+        client = get_authenticated_api(args)
+        request = models.EndpointCreationRequest()
+        request.name = args.name
+        request.tagIds = args.tag
+        request.groupId = args.group
+        request.url = args.url
+        # request.type
+
+        print(json.dumps(client.endpoints.list()))
+
     get_cmd = subcmd.add_parser("get")
     name_or_id_group(get_cmd)
     get_cmd.set_defaults(func=get)
 
     ls_cmd = subcmd.add_parser("ls")
     ls_cmd.set_defaults(func=ls)
+
+    create_cmd = subcmd.add_parser("create")
+    create_cmd.add_argument("name", help="Endpoint name")
+    create_cmd.add_argument(
+        "--type",
+        choices=list(models.EndpointCreationType),
+        type=models.EndpointCreationType.from_string,
+    )
+    create_cmd.add_argument("-u", "--url")
+    create_cmd.add_argument(
+        "-t",
+        "--tag",
+        action="append",
+        default=[],
+    )
+    create_cmd.add_argument("-g", "--group")
+    create_cmd.set_defaults(func=create)
 
 
 def _build_stacks_cmd(subparsers):
