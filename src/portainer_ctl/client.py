@@ -26,8 +26,10 @@ class Client:
         resp = requests.get(self.host + url, headers=self.token, **kwargs)
         return self.__extract(resp)
 
-    def post(self, url: str, data={}, **kwargs):
-        resp = requests.post(self.host + url, headers=self.token, json=data, **kwargs)
+    def post(self, url: str, json=None, data=None, **kwargs):
+        resp = requests.post(
+            self.host + url, headers=self.token, json=json, data=data, **kwargs
+        )
         return self.__extract(resp)
 
     def put(self, url: str, data, **kwargs):

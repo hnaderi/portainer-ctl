@@ -62,7 +62,7 @@ class StacksAPI:
             self.__client.put(
                 f"/stacks/{str(stack_id)}",
                 params={"endpointId": self.__endpoint_id},
-                data=data,
+                json=data,
             )
 
         else:
@@ -79,7 +79,7 @@ class StacksAPI:
             self.__client.post(
                 f"/stacks/create/swarm/string",
                 params={"endpointId": self.__endpoint_id},
-                data=data,
+                json=data,
             )
 
         return
@@ -211,12 +211,12 @@ class EndpointsAPI:
     def create(self, request: models.EndpointCreationRequest):
         data = {
             "Name": request.name,
-            "EndpointCreationType": request.type,
+            "EndpointCreationType": request.type.value,
             "URL": request.url,
             "GroupID": request.groupId,
             "TagIds": request.tagIds,
         }
-        return self.__client.post("/endpoints", data)
+        return self.__client.post("/endpoints", data=data)
 
     def list(self, **kwargs):
         logger.info("Getting a list of endpoints")

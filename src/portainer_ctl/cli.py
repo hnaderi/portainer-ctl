@@ -61,7 +61,7 @@ def requires_endpoint(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-E",
         "--endpoint",
-        help="endpoint to deploy on",
+        help="id of the endpoint to deploy on",
         required=True,
     )
 
@@ -71,15 +71,12 @@ def read_string(path):
         return "".join(f.readlines())
 
 
-def deploy_app(args):
-    try:
-        deploy(args)
-    except errors.RequestError as err:
-        print(err.url, err.status, err.body, file=sys.stderr)
-        sys.exit("Failed to deploy!")
+def get_unauthenticated_api(args):
+    client = Client(args.host)
+    return Portainer(client)
 
 
-def get_authenticated_client(args):
+def get_authenticated_api(args):
     HOST = getenv("PORTAINER_HOST", args.host)
     PASSWORD = getenv("PORTAINER_PASSWORD", args.password)
     USERNAME = getenv("PORTAINER_USERNAME", args.username)
@@ -90,18 +87,15 @@ def get_authenticated_client(args):
         client.authorize(API_TOKEN)
     else:
         client.login(USERNAME, PASSWORD)
-
-    return client
-
-
-def get_unauthenticated_api(args):
-    client = Client(args.host)
     return Portainer(client)
 
 
-def get_authenticated_api(args):
-    client = get_authenticated_client(args)
-    return Portainer(client)
+def deploy_app(args):
+    try:
+        deploy(args)
+    except errors.RequestError as err:
+        print(err.url, err.status, err.body, file=sys.stderr)
+        sys.exit("Failed to deploy!")
 
 
 def deploy(args):
@@ -214,9 +208,9 @@ def _build_endpoints_cmd(subparsers):
         request.tagIds = args.tag
         request.groupId = args.group
         request.url = args.url
-        # request.type
+        request.type = args.type
 
-        print(json.dumps(client.endpoints.list()))
+        print(json.dumps(client.endpoints.create(request)))
 
     get_cmd = subcmd.add_parser("get")
     name_or_id_group(get_cmd)
@@ -488,6 +482,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Portainer deployment client",
         epilog="Use it to automate workflows for less mouse clicks!",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     ### HACK: this is due to a known issue in argparse in python3
     parser.set_defaults(func=lambda args: parser.print_help())
@@ -500,19 +495,19 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-H",
         "--host",
-        help="portainer host, overrides PORTAINER_HOST variable; defaults to `http://127.0.0.1:9000/api`",
+        help="portainer host, overrides PORTAINER_HOST variable",
         default="http://127.0.0.1:9000/api",
     )
     parser.add_argument(
         "-U",
         "--username",
-        help="username to login, overrides PORTAINER_USERNAME variable; defaults to `admin`",
+        help="username to login, overrides PORTAINER_USERNAME variable",
         default="admin",
     )
     parser.add_argument(
         "-P",
         "--password",
-        help="password for user, overrides PORTAINER_PASSWORD variable; defaults to admin",
+        help="password for user, overrides PORTAINER_PASSWORD variable",
         default="admin",
     )
 
@@ -520,9 +515,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--debug", help="Whether or not print debugging logs", action="store_true"
     )
 
-    subparsers = parser.add_subparsers(
-        title="subcommands", description="valid subcommands", help="additional help"
-    )
+    subparsers = parser.add_subparsers(title="commands")
 
     _build_deploy_cmd(subparsers)
     _build_stacks_cmd(subparsers)
