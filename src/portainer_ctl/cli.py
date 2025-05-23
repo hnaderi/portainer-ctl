@@ -6,6 +6,9 @@ import logging
 import sys
 from os import getenv
 
+from rich import print
+from rich_argparse import ArgumentDefaultsRichHelpFormatter
+
 from . import errors, models
 from .api import Portainer
 from .client import Client
@@ -14,6 +17,12 @@ from .client import Client
 def configure_logging(args):
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
+
+
+def subcommand(parser: argparse._SubParsersAction, name: str, **kwargs):
+    return parser.add_parser(
+        name, formatter_class=ArgumentDefaultsRichHelpFormatter, **kwargs
+    )
 
 
 def parse_mount(conf: str):
@@ -135,7 +144,7 @@ def deploy(args):
 
 
 def _build_deploy_cmd(subparsers):
-    deploy_cmd = subparsers.add_parser("deploy")
+    deploy_cmd = subcommand(subparsers, "deploy")
     deploy_cmd.add_argument(
         "-f",
         "--compose-file",
@@ -183,7 +192,7 @@ def _build_deploy_cmd(subparsers):
 
 
 def _build_endpoints_cmd(subparsers):
-    endpoints_cmd = subparsers.add_parser("endpoints")
+    endpoints_cmd = subcommand(subparsers, "endpoints")
     endpoints_cmd.set_defaults(func=lambda args: endpoints_cmd.print_help())
 
     subcmd = endpoints_cmd.add_subparsers(
@@ -212,14 +221,14 @@ def _build_endpoints_cmd(subparsers):
 
         print(json.dumps(client.endpoints.create(request)))
 
-    get_cmd = subcmd.add_parser("get")
+    get_cmd = subcommand(subcmd, "get")
     name_or_id_group(get_cmd)
     get_cmd.set_defaults(func=get)
 
-    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd = subcommand(subcmd, "ls")
     ls_cmd.set_defaults(func=ls)
 
-    create_cmd = subcmd.add_parser("create")
+    create_cmd = subcommand(subcmd, "create")
     create_cmd.add_argument("name", help="Endpoint name")
     create_cmd.add_argument(
         "--type",
@@ -238,7 +247,7 @@ def _build_endpoints_cmd(subparsers):
 
 
 def _build_stacks_cmd(subparsers):
-    stacks_cmd = subparsers.add_parser("stacks")
+    stacks_cmd = subcommand(subparsers, "stacks")
     stacks_cmd.set_defaults(func=lambda args: stacks_cmd.print_help())
 
     subcmd = stacks_cmd.add_subparsers(
@@ -287,10 +296,10 @@ def _build_stacks_cmd(subparsers):
 
     _build_deploy_cmd(subcmd)
 
-    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd = subcommand(subcmd, "ls")
     ls_cmd.set_defaults(func=ls)
 
-    get_cmd = subcmd.add_parser("get")
+    get_cmd = subcommand(subcmd, "get")
     name_or_id_group(get_cmd)
     get_cmd.set_defaults(func=get)
 
@@ -298,17 +307,17 @@ def _build_stacks_cmd(subparsers):
     get_file_cmd.add_argument("id")
     get_file_cmd.set_defaults(func=get_file)
 
-    start_cmd = subcmd.add_parser("start")
+    start_cmd = subcommand(subcmd, "start")
     start_cmd.add_argument("id")
     requires_endpoint(start_cmd)
     start_cmd.set_defaults(func=start)
 
-    stop_cmd = subcmd.add_parser("stop")
+    stop_cmd = subcommand(subcmd, "stop")
     stop_cmd.add_argument("id")
     requires_endpoint(stop_cmd)
     stop_cmd.set_defaults(func=stop)
 
-    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd = subcommand(subcmd, "delete")
     name_or_id_group(delete_cmd)
     requires_endpoint(delete_cmd)
     delete_cmd.add_argument(
@@ -320,7 +329,7 @@ def _build_stacks_cmd(subparsers):
 
 
 def _build_tags_cmd(subparsers):
-    tags_cmd = subparsers.add_parser("tags")
+    tags_cmd = subcommand(subparsers, "tags")
     tags_cmd.set_defaults(func=lambda args: tags_cmd.print_help())
 
     subcmd = tags_cmd.add_subparsers(
@@ -339,20 +348,20 @@ def _build_tags_cmd(subparsers):
         client = get_authenticated_api(args)
         client.tags.delete(args.id)
 
-    create_cmd = subcmd.add_parser("create")
+    create_cmd = subcommand(subcmd, "create")
     create_cmd.add_argument("name")
     create_cmd.set_defaults(func=create)
 
-    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd = subcommand(subcmd, "ls")
     ls_cmd.set_defaults(func=ls)
 
-    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd = subcommand(subcmd, "delete")
     delete_cmd.add_argument("id")
     delete_cmd.set_defaults(func=delete)
 
 
 def _build_secrets_cmd(subparsers):
-    secrets_cmd = subparsers.add_parser("secrets")
+    secrets_cmd = subcommand(subparsers, "secrets")
     secrets_cmd.set_defaults(func=lambda args: secrets_cmd.print_help())
 
     subcmd = secrets_cmd.add_subparsers(
@@ -382,22 +391,22 @@ def _build_secrets_cmd(subparsers):
         client = get_authenticated_api(args)
         client.endpoint(args.endpoint).secrets.delete(args.id)
 
-    create_cmd = subcmd.add_parser("create")
+    create_cmd = subcommand(subcmd, "create")
     create_cmd.add_argument("name")
     file_or_inline(create_cmd)
     create_cmd.set_defaults(func=create)
 
-    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd = subcommand(subcmd, "ls")
     docker_filter_group(ls_cmd)
     ls_cmd.set_defaults(func=ls)
 
-    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd = subcommand(subcmd, "delete")
     delete_cmd.add_argument("id")
     delete_cmd.set_defaults(func=delete)
 
 
 def _build_configs_cmd(subparsers):
-    configs_cmd = subparsers.add_parser("configs")
+    configs_cmd = subcommand(subparsers, "configs")
     configs_cmd.set_defaults(func=lambda args: configs_cmd.print_help())
 
     subcmd = configs_cmd.add_subparsers(
@@ -427,22 +436,22 @@ def _build_configs_cmd(subparsers):
         client = get_authenticated_api(args)
         client.endpoint(args.endpoint).configs.delete(args.id)
 
-    create_cmd = subcmd.add_parser("create")
+    create_cmd = subcommand(subcmd, "create")
     create_cmd.add_argument("name")
     file_or_inline(create_cmd)
     create_cmd.set_defaults(func=create)
 
-    ls_cmd = subcmd.add_parser("ls")
+    ls_cmd = subcommand(subcmd, "ls")
     docker_filter_group(ls_cmd)
     ls_cmd.set_defaults(func=ls)
 
-    delete_cmd = subcmd.add_parser("delete")
+    delete_cmd = subcommand(subcmd, "delete")
     delete_cmd.add_argument("id")
     delete_cmd.set_defaults(func=delete)
 
 
 def _build_system_cmd(subparsers):
-    cmd = subparsers.add_parser("system")
+    cmd = subcommand(subparsers, "system")
     cmd.set_defaults(func=lambda args: cmd.print_help())
 
     subcmd = cmd.add_subparsers(
@@ -463,7 +472,7 @@ def _build_system_cmd(subparsers):
                 json.dumps(portainer.public.init(username=USERNAME, password=PASSWORD))
             )
 
-        init_cmd = subcmd.add_parser("init")
+        init_cmd = subcommand(subcmd, "init")
         init_cmd.set_defaults(func=init)
 
     def build_status_cmd():
@@ -471,7 +480,7 @@ def _build_system_cmd(subparsers):
             client = get_unauthenticated_api(args)
             print(json.dumps(client.public.status()))
 
-        status = subcmd.add_parser("status")
+        status = subcommand(subcmd, "status")
         status.set_defaults(func=get)
 
     build_init_cmd()
@@ -482,7 +491,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Portainer deployment client",
         epilog="Use it to automate workflows for less mouse clicks!",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=ArgumentDefaultsRichHelpFormatter,
     )
     ### HACK: this is due to a known issue in argparse in python3
     parser.set_defaults(func=lambda args: parser.print_help())

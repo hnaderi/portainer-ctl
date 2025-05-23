@@ -13,7 +13,11 @@ keywords = [
     "docker swarm",
     "kubectl",
 ]
-dependencies = ["requests>=2.31.0,<3"]
+dependencies = [
+    "requests>=2.31.0,<3",
+    "rich>=14.0.0",
+    "rich-argparse>=1.7.0",
+]
 
 [project.scripts]
 pctl = "portainer_ctl.cli:main"
