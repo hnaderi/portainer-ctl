@@ -36,7 +36,7 @@ def parse_mount(conf: str):
         path, name = conf.split(":")
         return (path, name)
     except Exception:
-        print("invalid mount argument: " + conf)
+        raise errors.InvalidCommand("invalid mount argument: " + conf)
 
 
 def name_or_id_group(parser: argparse.ArgumentParser):
@@ -105,22 +105,14 @@ def get_authenticated_api(args):
     return Portainer(client)
 
 
-def deploy_app(args):
-    try:
-        deploy(args)
-    except errors.RequestError as err:
-        print(err.url, err.status, err.body, file=sys.stderr)
-        sys.exit("Failed to deploy!")
-
-
 def deploy(args):
+    request = models.DeploymentRequest()
     api = get_authenticated_api(args)
 
-    endpoint = api.endpoint(args.endpoint)
+    request.name = args.stack_name
 
-    compose = ""
     with open(args.compose_file, "r") as f:
-        compose = "".join(f.readlines())
+        request.compose = "".join(f.readlines())
 
     env_lines = args.variable
     if args.env_file != None:
@@ -128,25 +120,27 @@ def deploy(args):
             lines = f.readlines()
             env_lines = env_lines + lines
 
-    env_vars = []
+    request.variables = dict()
     for line in env_lines:
         striped = line.strip()
         idx = striped.find("=")
-        env_vars.append({"name": striped[:idx], "value": striped[idx + 1 :]})
+        request.variables[striped[:idx]] = striped[idx + 1 :]
 
-    for conf in args.config:
-        path, name = parse_mount(conf)
-        data = read_string(path)
-        endpoint.configs.create(name=name, data=data)
-
-    for conf in args.secret:
-        path, name = parse_mount(conf)
-        data = read_string(path)
-        endpoint.secrets.create(name=name, data=data)
-
-    return endpoint.stacks.create(
-        stack_name=args.stack_name, compose=compose, env_vars=env_vars
+    request.configs = dict(
+        [
+            (name, read_string(path))
+            for (path, name) in [parse_mount(conf) for conf in args.config]
+        ]
     )
+
+    request.secrets = dict(
+        [
+            (name, read_string(path))
+            for (path, name) in [parse_mount(conf) for conf in args.secret]
+        ]
+    )
+
+    return api.endpoint(args.endpoint).deploy(request, args.no_error)
 
 
 def _build_deploy_cmd(subparsers):
@@ -193,7 +187,14 @@ def _build_deploy_cmd(subparsers):
         action="append",
         default=[],
     )
-    deploy_cmd.set_defaults(func=deploy_app)
+
+    deploy_cmd.add_argument(
+        "-K",
+        "--no-error",
+        help="Don't raise error if there are existing configs or secrets",
+        action="store_true",
+    )
+    deploy_cmd.set_defaults(func=deploy)
 
 
 def _build_endpoints_cmd(subparsers):
@@ -569,7 +570,14 @@ def main():
     parser = _build_parser()
     args = parser.parse_args()
     configure_logging(args)
-    args.func(args)
+    try:
+        args.func(args)
+    except errors.InvalidCommand as err:
+        print(err.msg, file=sys.stderr)
+        sys.exit(1)
+    except errors.RequestError as err:
+        print(err.url, err.status, err.body, file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 class EndpointCreationType(Enum):
@@ -23,3 +23,11 @@ class EndpointCreationRequest:
     url: Optional[str]
     tagIds: List[int]
     groupId: int
+
+
+class DeploymentRequest:
+    name: str
+    compose: str
+    configs: Dict[str, str]
+    secrets: Dict[str, str]
+    variables: Dict[str, str]

@@ -127,10 +127,7 @@ class ConfigsAPI:
 
         logger.info("Creating new config " + name)
         body = {"Data": helpers.to_base64(data), "Name": name, "Labels": {}}
-        try:
-            return self.__client.post(f"{self.__base}/create", body)
-        except Exception as e:
-            logger.error(f"cannot create config: {str(e)}")
+        return self.__client.post(f"{self.__base}/create", body)
 
     def get(self, id: str):
         return self.ls(id=[id])
@@ -165,10 +162,7 @@ class SecretsAPI:
 
         logger.info("Creating new secret " + name)
         body = {"Data": helpers.to_base64(data), "Name": name, "Labels": {}}
-        try:
-            return self.__client.post(f"{self.__base}/create", body)
-        except Exception as e:
-            logger.error(f"cannot create secret: {str(e)}")
+        return self.__client.post(f"{self.__base}/create", body)
 
     def ls(self, **kwargs):
         return self.__client.get(
@@ -205,6 +199,36 @@ class EndpointAPI:
         logger.info("Getting endpoint docker version")
         resp = self.__client.get("/endpoints/" + self.__endpoint_id + "/docker/version")
         return resp
+
+    def deploy(self, request: models.DeploymentRequest, no_error: bool = False):
+        """
+        Deploys a compose file with it's required configs and secrets
+
+        Raises an error if there is at least one already existing config or secret and `no_error` is False
+        """
+
+        for name, data in request.configs.items():
+            try:
+                self.configs.create(name=name, data=data)
+            except errors.RequestError:
+                if not no_error:
+                    raise
+
+        for name, data in request.secrets.items():
+            try:
+                self.secrets.create(name=name, data=data)
+            except errors.RequestError:
+                if not no_error:
+                    raise
+
+        return self.stacks.create(
+            stack_name=request.name,
+            compose=request.compose,
+            env_vars=[
+                {"name": key, "value": key}
+                for (key, value) in request.variables.items()
+            ],
+        )
 
 
 class EndpointsAPI:
