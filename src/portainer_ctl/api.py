@@ -59,10 +59,10 @@ class StacksAPI:
                 "id": stack_id,
             }
 
-            self.__client.put(
+            return self.__client.put(
                 f"/stacks/{str(stack_id)}",
                 params={"endpointId": self.__endpoint_id},
-                json=data,
+                data=data,
             )
 
         else:
@@ -76,13 +76,11 @@ class StacksAPI:
                 "SwarmID": swarm_id,
                 "StackFileContent": compose,
             }
-            self.__client.post(
+            return self.__client.post(
                 f"/stacks/create/swarm/string",
                 params={"endpointId": self.__endpoint_id},
                 json=data,
             )
-
-        return
 
     def start(self, id):
         return self.__client.post(

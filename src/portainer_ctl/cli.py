@@ -7,16 +7,22 @@ import sys
 from os import getenv
 
 from rich import print
+from rich.logging import RichHandler
 from rich_argparse import ArgumentDefaultsRichHelpFormatter
 
-from . import errors, models
+from . import errors, models, printer
 from .api import Portainer
 from .client import Client
 
 
 def configure_logging(args):
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(message)s",
+            datefmt="[%X]",
+            handlers=[RichHandler(rich_tracebacks=True)],
+        )
 
 
 def subcommand(parser: argparse._SubParsersAction, name: str, **kwargs):
@@ -138,7 +144,7 @@ def deploy(args):
         data = read_string(path)
         endpoint.secrets.create(name=name, data=data)
 
-    endpoint.stacks.create(
+    return endpoint.stacks.create(
         stack_name=args.stack_name, compose=compose, env_vars=env_vars
     )
 
@@ -152,7 +158,6 @@ def _build_deploy_cmd(subparsers):
         default="docker-compose.yaml",
         required=True,
     )
-    deploy_cmd.add_argument("-n", "--name", help="deployment name", required=True)
     requires_endpoint(deploy_cmd)
     deploy_cmd.add_argument(
         "-S",
@@ -202,21 +207,26 @@ def _build_endpoints_cmd(subparsers):
     def get(args):
         client = get_authenticated_api(args)
         if args.name:
-            print(json.dumps(client.endpoints.get_by_name(args.name)))
+            printer.print(args, data=client.endpoints.get_by_name(args.name))
         elif args.id:
-            print(json.dumps(client.endpoints.get(args.id)))
+            printer.print(args, data=client.endpoints.get(args.id))
 
     def ls(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoints.list()))
+
+        printer.print(
+            args,
+            data=client.endpoints.list(),
+            columns=["Id", "Name", "Type", "URL", "ContainerEngine"],
+        )
 
     def info(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoint(args.endpoint).get_docker_info()))
+        printer.print(args, data=client.endpoint(args.endpoint).get_docker_info())
 
     def version(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoint(args.endpoint).get_docker_version()))
+        printer.print(args, data=client.endpoint(args.endpoint).get_docker_version())
 
     def create(args):
         client = get_authenticated_api(args)
@@ -227,7 +237,7 @@ def _build_endpoints_cmd(subparsers):
         request.url = args.url
         request.type = args.type
 
-        print(json.dumps(client.endpoints.create(request)))
+        printer.print(args, data=client.endpoints.create(request))
 
     get_cmd = subcommand(subcmd, "get")
     name_or_id_group(get_cmd)
@@ -273,42 +283,44 @@ def _build_stacks_cmd(subparsers):
     def get(args):
         client = get_authenticated_api(args)
         if args.name:
-            print(json.dumps(client.stacks.get_stacks_by_name(args.name)))
+            printer.print(args, data=client.stacks.get_stacks_by_name(args.name))
         elif args.id:
-            print(json.dumps(client.stacks.get(args.id)))
+            printer.print(args, data=client.stacks.get(args.id))
 
     def get_file(args):
         client = get_authenticated_api(args)
-        print(client.stacks.get_file(args.id))
+        printer.raw(client.stacks.get_file(args.id))
 
     def ls(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.stacks.list()))
+        printer.print(
+            args,
+            data=client.stacks.list(),
+            columns=["Id", "Name", "Type", "Status", "EndpointId", "SwarmId"],
+        )
 
     def delete(args):
         client = get_authenticated_api(args)
         if args.id:
-            print(
-                json.dumps(
-                    client.endpoint(args.endpoint).stacks.delete(args.id, args.external)
-                )
+            printer.print(
+                args,
+                client.endpoint(args.endpoint).stacks.delete(args.id, args.external),
             )
         elif args.name:
-            print(
-                json.dumps(
-                    client.endpoint(args.endpoint).stacks.delete_by_name(
-                        args.name, args.external
-                    )
-                )
+            printer.print(
+                args,
+                client.endpoint(args.endpoint).stacks.delete_by_name(
+                    args.name, args.external
+                ),
             )
 
     def start(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoint(args.endpoint).stacks.start(args.id)))
+        printer.print(args, data=client.endpoint(args.endpoint).stacks.start(args.id))
 
     def stop(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.endpoint(args.endpoint).stacks.stop(args.id)))
+        printer.print(args, data=client.endpoint(args.endpoint).stacks.stop(args.id))
 
     _build_deploy_cmd(subcmd)
 
@@ -354,11 +366,11 @@ def _build_tags_cmd(subparsers):
 
     def create(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.tags.create(args.name)))
+        printer.print(args, data=client.tags.create(args.name))
 
     def ls(args):
         client = get_authenticated_api(args)
-        print(json.dumps(client.tags.list()))
+        printer.print(args, data=client.tags.list())
 
     def delete(args):
         client = get_authenticated_api(args)
@@ -389,18 +401,17 @@ def _build_secrets_cmd(subparsers):
     def create(args):
         client = get_authenticated_api(args)
         data = args.value if args.value else read_string(args.file)
-        print(
-            json.dumps(client.endpoint(args.endpoint).secrets.create(args.name, data))
+        printer.print(
+            args, client.endpoint(args.endpoint).secrets.create(args.name, data)
         )
 
     def ls(args):
         client = get_authenticated_api(args)
-        print(
-            json.dumps(
-                client.endpoint(args.endpoint).secrets.ls(
-                    id=args.id, name=args.name, label=args.label
-                )
-            )
+        printer.print(
+            args,
+            client.endpoint(args.endpoint).secrets.ls(
+                id=args.id, name=args.name, label=args.label
+            ),
         )
 
     def delete(args):
@@ -434,18 +445,17 @@ def _build_configs_cmd(subparsers):
     def create(args):
         client = get_authenticated_api(args)
         data = args.value if args.value else read_string(args.file)
-        print(
-            json.dumps(client.endpoint(args.endpoint).configs.create(args.name, data))
+        printer.print(
+            args, client.endpoint(args.endpoint).configs.create(args.name, data)
         )
 
     def ls(args):
         client = get_authenticated_api(args)
-        print(
-            json.dumps(
-                client.endpoint(args.endpoint).configs.ls(
-                    id=args.id, name=args.name, label=args.label
-                )
-            )
+        printer.print(
+            args,
+            client.endpoint(args.endpoint).configs.ls(
+                id=args.id, name=args.name, label=args.label
+            ),
         )
 
     def delete(args):
@@ -484,8 +494,8 @@ def _build_system_cmd(subparsers):
                 )
             portainer = get_unauthenticated_api(args)
 
-            print(
-                json.dumps(portainer.public.init(username=USERNAME, password=PASSWORD))
+            printer.print(
+                args, portainer.public.init(username=USERNAME, password=PASSWORD)
             )
 
         init_cmd = subcommand(subcmd, "init")
@@ -494,7 +504,7 @@ def _build_system_cmd(subparsers):
     def build_status_cmd():
         def get(args):
             client = get_unauthenticated_api(args)
-            print(json.dumps(client.public.status()))
+            printer.print(args, data=client.public.status())
 
         status = subcommand(subcmd, "status")
         status.set_defaults(func=get)
@@ -539,6 +549,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--debug", help="Whether or not print debugging logs", action="store_true"
     )
+
+    parser.add_argument("-j", "--json", help="Print json output", action="store_true")
 
     subparsers = parser.add_subparsers(title="commands")
 
