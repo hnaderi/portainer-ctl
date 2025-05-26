@@ -24,26 +24,26 @@ docker pull ghcr.io/hnaderi/pctl
 #### Usage
 
 ``` plaintext
-usage: pctl [-h] [-T API_TOKEN] [-H HOST] [-U USERNAME] [-P PASSWORD] {deploy,destroy} ...
+Usage: pctl [-h] [-T API_TOKEN] [-H HOST] [-U USERNAME] [-P PASSWORD] [--debug] [-j] {deploy,stacks,configs,secrets,endpoints,tags,system} ...
 
-Portainer deployment client
+Poorman's kubectl, CLI for portainer on docker swarm
 
-optional arguments:
+Options:
   -h, --help            show this help message and exit
-  -T API_TOKEN, --api-token API_TOKEN
-                        api token for user, overrides PORTAINER_TOKEN variable
-  -H HOST, --host HOST  portainer host, overrides PORTAINER_HOST variable; defaults to `http://localhost`
-  -U USERNAME, --username USERNAME
-                        username to login, overrides PORTAINER_USERNAME variable; defaults to `admin`
-  -P PASSWORD, --password PASSWORD
-                        password for user, overrides PORTAINER_PASSWORD variable; defaults to admin
+  -T, --api-token API_TOKEN
+                        api token for user, overrides PORTAINER_TOKEN variable (default: None)
+  -H, --host HOST       portainer host, overrides PORTAINER_HOST variable (default: http://127.0.0.1:9000/api)
+  -U, --username USERNAME
+                        username to login, overrides PORTAINER_USERNAME variable (default: admin)
+  -P, --password PASSWORD
+                        password for user, overrides PORTAINER_PASSWORD variable (default: admin)
+  --debug               Whether or not print debugging logs (default: False)
+  -j, --json            Print json output (default: False)
 
-subcommands:
-  valid subcommands
+Commands:
+  {deploy,stacks,configs,secrets,endpoints,tags,system}
 
-  {deploy,destroy}      additional help
-
-Use it to automate workflows for less mouse clicks!
+No budget. No vendors. No fleet of ops. Just you, a blinking cursor, and the will to script what others buy. The rich scale with dollars. You scale with shell. Excuses cost, Automation pays!
 ```
 
 You can provide host, username and password in environment:
@@ -51,33 +51,3 @@ You can provide host, username and password in environment:
 - PORTAINER_USERNAME
 - PORTAINER_PASSWORD
 - PORTAINER_TOKEN
-
-##### deploy command
-
-``` plaintext
-usage: pctl deploy [-h] -f COMPOSE_FILE -n NAME -E {staging,production}
-                   [-S STACK_NAME] [--env-file ENV_FILE] [-e VARIABLE]
-                   [-c CONFIG] [-s SECRET]
-
-options:
-  -h, --help            show this help message and exit
-  -f COMPOSE_FILE, --compose-file COMPOSE_FILE
-                        compose manifest file
-  -n NAME, --name NAME  deployment name
-  -E {staging,production}, --environment {staging,production}
-                        environment to deploy on
-  -S STACK_NAME, --stack-name STACK_NAME
-                        use this to override stack name
-  --env-file ENV_FILE   dot env file used for deployment, it will be used as
-                        stack environment in portainer
-  -e VARIABLE, --variable VARIABLE
-                        environment variable `SOME_ENV=some-value`
-  -c CONFIG, --config CONFIG
-                        create config; args must be like `local-path-to-
-                        file:conf-name`; NOTE that as configs are immutable
-                        and might be already in use, your config name must not
-                        exist! use versioning or date in names to always get a
-                        new name
-  -s SECRET, --secret SECRET
-                        create a new secret; see --config.
-```
