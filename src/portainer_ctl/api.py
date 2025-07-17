@@ -225,7 +225,7 @@ class EndpointAPI:
             stack_name=request.name,
             compose=request.compose,
             env_vars=[
-                {"name": key, "value": key}
+                {"name": key, "value": value}
                 for (key, value) in request.variables.items()
             ],
         )
