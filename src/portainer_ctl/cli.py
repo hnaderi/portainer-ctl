@@ -518,11 +518,14 @@ def _build_system_cmd(subparsers):
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Poorman's kubectl, CLI for portainer on docker swarm",
-        epilog=Markdown("""No budget. No vendors. No fleet of ops.
+        epilog=Markdown(
+            """No budget. No vendors. No fleet of ops.
         Just you, a blinking cursor, and the will to script what others buy.
         The rich scale with dollars. You scale with shell.
-        Excuses cost, Automation pays!
-        """, style="italic sky_blue1"),
+        Excuses cost, Automation pays! 🔧
+        """,
+            style="italic sky_blue1",
+        ),
         formatter_class=ArgumentDefaultsRichHelpFormatter,
     )
     ### HACK: this is due to a known issue in argparse in python3
