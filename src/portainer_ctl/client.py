@@ -5,7 +5,7 @@ import logging
 import requests
 from requests.structures import CaseInsensitiveDict
 
-from . import errors, helpers
+from . import errors
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-import pytest
 
 from portainer_ctl.helpers import to_base64
 

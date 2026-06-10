@@ -6,8 +6,6 @@ import pytest
 from portainer_ctl import errors
 from portainer_ctl.cli import (
     _DEFAULT_HOST,
-    _DEFAULT_PASSWORD,
-    _DEFAULT_USERNAME,
     _resolve_host,
     parse_mount,
 )

@@ -86,7 +86,7 @@ class StacksAPI:
                 "StackFileContent": compose,
             }
             return self.__client.post(
-                f"/stacks/create/swarm/string",
+                "/stacks/create/swarm/string",
                 params={"endpointId": self.__endpoint_id},
                 json=data,
             )

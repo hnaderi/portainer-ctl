@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -55,7 +55,7 @@ def test_create_updates_when_one_existing_stack():
         put_return={"Id": 7},
     )
     api = _stacks_api(client)
-    result = api.create("app", "compose-content", [])
+    api.create("app", "compose-content", [])
     client.put.assert_called_once()
     assert "/stacks/7" in client.put.call_args[0][0]
 
@@ -83,7 +83,7 @@ def test_create_new_stack_in_swarm():
         docker_info,             # EndpointAPI.get_docker_info
     ]
     api = _stacks_api(client)
-    result = api.create("newapp", "compose-content", [])
+    api.create("newapp", "compose-content", [])
     client.post.assert_called_once()
     assert "swarm/string" in client.post.call_args[0][0]
 
