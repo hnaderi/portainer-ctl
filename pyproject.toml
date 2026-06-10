@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 pctl = "portainer_ctl.cli:main"
+portainer-ctl = "portainer_ctl.cli:main"
 
 [dependency-groups]
 dev = [
