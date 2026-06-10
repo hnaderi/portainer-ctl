@@ -24,6 +24,8 @@ def __table(
     """
 
     if isinstance(data, list):
+        if not data:
+            return
         if not columns:
             columns = list(data[0].keys())
         rows = data

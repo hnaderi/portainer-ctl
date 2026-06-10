@@ -1,9 +1,6 @@
 import json
 import logging
 
-import requests
-from requests.structures import CaseInsensitiveDict
-
 from . import errors, helpers, models
 from .client import Client
 
@@ -21,6 +18,8 @@ class GlobalStacksAPI:
     def get_stack_id_by_name(self, name):
         stacks = self.list(name=name)
         ids = [s["Id"] for s in stacks if s["Name"] == name]
+        if not ids:
+            raise errors.InvalidCommand(f"Stack '{name}' not found")
         return ids[0]
 
     def get_stacks_by_name(self, name):
@@ -47,7 +46,11 @@ class StacksAPI:
 
         stacks = GlobalStacksAPI(self.__client).get_stacks_by_name(stack_name)
 
-        if len(stacks) == 1:
+        if len(stacks) > 1:
+            raise errors.InvalidCommand(
+                f"Multiple stacks found with name '{stack_name}'; cannot determine which to update"
+            )
+        elif len(stacks) == 1:
             logger.info("Updating existing stack name: " + stack_name)
             existing_stack = stacks[0]
             stack_id = existing_stack["Id"]
@@ -68,7 +71,13 @@ class StacksAPI:
         else:
             logger.info("No existing stack with name: " + stack_name)
             info = EndpointAPI(self.__client, self.__endpoint_id).get_docker_info()
-            swarm_id = info["Swarm"]["Cluster"]["ID"]
+            swarm = info.get("Swarm") or {}
+            cluster = swarm.get("Cluster")
+            if not cluster:
+                raise errors.InvalidCommand(
+                    "Endpoint is not part of a Docker Swarm cluster"
+                )
+            swarm_id = cluster["ID"]
 
             data = {
                 "Env": env_vars,

@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -17,17 +18,19 @@ class EndpointCreationType(Enum):
             raise ValueError()
 
 
+@dataclass
 class EndpointCreationRequest:
-    name: str
-    type: EndpointCreationType
-    url: Optional[str]
-    tagIds: List[int]
-    groupId: int
+    name: str = ""
+    type: EndpointCreationType = EndpointCreationType.LocalDocker
+    url: Optional[str] = None
+    tagIds: List[int] = field(default_factory=list)
+    groupId: int = 0
 
 
+@dataclass
 class DeploymentRequest:
-    name: str
-    compose: str
-    configs: Dict[str, str]
-    secrets: Dict[str, str]
-    variables: Dict[str, str]
+    name: str = ""
+    compose: str = ""
+    configs: Dict[str, str] = field(default_factory=dict)
+    secrets: Dict[str, str] = field(default_factory=dict)
+    variables: Dict[str, str] = field(default_factory=dict)

@@ -34,7 +34,7 @@ def subcommand(parser: argparse._SubParsersAction, name: str, **kwargs):
 
 def parse_mount(conf: str):
     try:
-        path, name = conf.split(":")
+        path, name = conf.split(":", 1)
         return (path, name)
     except Exception:
         raise errors.InvalidCommand("invalid mount argument: " + conf)
@@ -84,19 +84,28 @@ def requires_endpoint(parser: argparse.ArgumentParser):
 
 def read_string(path):
     with open(path, "r") as f:
-        return "".join(f.readlines())
+        return f.read()
+
+
+_DEFAULT_HOST = "http://127.0.0.1:9000/api"
+_DEFAULT_USERNAME = "admin"
+_DEFAULT_PASSWORD = "admin"
+
+
+def _resolve_host(args):
+    return args.host or getenv("PORTAINER_HOST") or _DEFAULT_HOST
 
 
 def get_unauthenticated_api(args):
-    client = Client(args.host)
+    client = Client(_resolve_host(args))
     return Portainer(client)
 
 
 def get_authenticated_api(args):
-    HOST = getenv("PORTAINER_HOST", args.host)
-    PASSWORD = getenv("PORTAINER_PASSWORD", args.password)
-    USERNAME = getenv("PORTAINER_USERNAME", args.username)
-    API_TOKEN = getenv("PORTAINER_TOKEN", args.api_token)
+    HOST = _resolve_host(args)
+    PASSWORD = args.password or getenv("PORTAINER_PASSWORD") or _DEFAULT_PASSWORD
+    USERNAME = args.username or getenv("PORTAINER_USERNAME") or _DEFAULT_USERNAME
+    API_TOKEN = args.api_token or getenv("PORTAINER_TOKEN")
 
     client = Client(HOST)
     if API_TOKEN:
@@ -116,16 +125,19 @@ def deploy(args):
         request.compose = "".join(f.readlines())
 
     env_lines = args.variable
-    if args.env_file != None:
+    if args.env_file is not None:
         with open(args.env_file, "r") as f:
-            lines = f.readlines()
-            env_lines = env_lines + lines
+            env_lines = env_lines + f.readlines()
 
     request.variables = dict()
     for line in env_lines:
-        striped = line.strip()
-        idx = striped.find("=")
-        request.variables[striped[:idx]] = striped[idx + 1 :]
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        idx = stripped.find("=")
+        if idx < 0:
+            continue
+        request.variables[stripped[:idx]] = stripped[idx + 1 :]
 
     request.configs = dict(
         [
@@ -488,8 +500,8 @@ def _build_system_cmd(subparsers):
 
     def build_init_cmd():
         def init(args):
-            PASSWORD = getenv("PORTAINER_PASSWORD", args.password)
-            USERNAME = getenv("PORTAINER_USERNAME", args.username)
+            PASSWORD = args.password or getenv("PORTAINER_PASSWORD") or _DEFAULT_PASSWORD
+            USERNAME = args.username or getenv("PORTAINER_USERNAME") or _DEFAULT_USERNAME
             if not (USERNAME and PASSWORD):
                 raise errors.InvalidCommand(
                     "Both username and password are required for admin initiation."
@@ -534,25 +546,25 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-T",
         "--api-token",
-        help="api token for user, overrides PORTAINER_TOKEN variable",
+        help="api token for user, overrides PORTAINER_TOKEN env var",
     )
     parser.add_argument(
         "-H",
         "--host",
-        help="portainer host, overrides PORTAINER_HOST variable",
-        default="http://127.0.0.1:9000/api",
+        help=f"portainer host, overrides PORTAINER_HOST env var (default: {_DEFAULT_HOST})",
+        default=None,
     )
     parser.add_argument(
         "-U",
         "--username",
-        help="username to login, overrides PORTAINER_USERNAME variable",
-        default="admin",
+        help=f"username to login, overrides PORTAINER_USERNAME env var (default: {_DEFAULT_USERNAME})",
+        default=None,
     )
     parser.add_argument(
         "-P",
         "--password",
-        help="password for user, overrides PORTAINER_PASSWORD variable",
-        default="admin",
+        help=f"password for user, overrides PORTAINER_PASSWORD env var (default: {_DEFAULT_PASSWORD})",
+        default=None,
     )
 
     parser.add_argument(

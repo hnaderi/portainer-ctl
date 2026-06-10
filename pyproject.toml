@@ -26,6 +26,7 @@ pctl = "portainer_ctl.cli:main"
 dev = [
     "black>=23.7.0,<24",
     "isort>=5.12.0,<6",
+    "pytest>=8.0.0",
 ]
 
 [build-system]

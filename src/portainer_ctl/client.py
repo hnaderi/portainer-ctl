@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import json
 import logging
 
 import requests
@@ -18,7 +17,7 @@ class Client:
 
     def __extract(self, resp):
         if resp.ok:
-            return resp.json()
+            return resp.json() if resp.content else None
         else:
             raise errors.RequestError(resp.url, resp.status_code, resp.text)
 
@@ -34,7 +33,7 @@ class Client:
 
     def put(self, url: str, data, **kwargs):
         resp = requests.put(
-            self.host + url, headers=self.token, data=json.dumps(data), **kwargs
+            self.host + url, headers=self.token, json=data, **kwargs
         )
         return self.__extract(resp)
 
